@@ -3,6 +3,11 @@ const $ = (id) => document.getElementById(id);
 
 const PUBLIC_MARKER = "PWD-DWT-V1";
 
+const PATCH_X = PHOTO_X;
+const PATCH_Y = PHOTO_Y;
+const PATCH_W = DWT_N; // 256
+const PATCH_H = DWT_N; // 256
+
 const fileEl = $("file");
 const stepVal = $("stepVal");
 
@@ -53,7 +58,15 @@ fileEl.addEventListener("change", async () => {
   stepVal.textContent = `auto: ${autoStep}`;
 
   // Crop photo region
-  const region = bctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H);
+  // Take EXACT 256x256 patch (no resize)
+const patch = bctx.getImageData(PATCH_X, PATCH_Y, PATCH_W, PATCH_H);
+
+// Extract BLUE channel float array
+blueForExtract = new Float32Array(DWT_N * DWT_N);
+for(let p=0, i=0; p<blueForExtract.length; p++, i+=4){
+  blueForExtract[p] = patch.data[i+2];
+}
+
 
   // Resize to DWT_N x DWT_N
   const tmp = document.createElement("canvas");
