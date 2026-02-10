@@ -1,156 +1,53 @@
+<!-- verify.html (VERIFIER) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PWD ID Verifier (DWT)</title>
+  <title>PWD ID Verifier (Auto)</title>
   <link rel="stylesheet" href="verify.css" />
 </head>
 <body>
   <div class="wrap">
     <header class="top">
       <h1>✅ PWD ID Verifier</h1>
-      <p class="sub">Upload the ID image → enter secret + payload → verify hidden DWT signature.</p>
+      <p class="sub">Upload an ID image → auto-check if the hidden DWT marker is present.</p>
     </header>
 
     <main class="grid">
       <section class="card">
         <h2>Upload</h2>
-        <label class="lbl">Signed ID Image (PNG/JPG)</label>
+        <label class="lbl">ID Image (PNG/JPG)</label>
         <input id="file" type="file" accept="image/*" />
 
         <hr/>
 
-        <h2>Verification Input</h2>
-
-        <label class="lbl">Secret Key</label>
-        <input id="secret" class="in" type="password" placeholder="Same secret used during export" />
-
-        <details class="details" open>
-          <summary><b>Option A:</b> Paste payload string (recommended)</summary>
-
-          <label class="lbl">Payload String</label>
-          <textarea id="payloadRaw" class="in" rows="5"
-            placeholder="Paste the exact payload string used by the maker (buildPayloadString output)"></textarea>
-
-          <p class="hint">
-            This is the most reliable because verification must reproduce the exact same text.
-          </p>
-        </details>
-
-        <details class="details">
-          <summary><b>Option B:</b> Rebuild payload from fields (if you know them)</summary>
-
-          <div class="row2">
-            <div>
-              <label class="lbl">PWD ID Number</label>
-              <input id="pwdno" class="in" placeholder="e.g., PWD-01-234567" />
-            </div>
-            <div>
-              <label class="lbl">Sex</label>
-              <select id="sex" class="in">
-                <option value="">—</option>
-                <option>Male</option>
-                <option>Female</option>
-                <option>Prefer not to say</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row3">
-            <div>
-              <label class="lbl">Last Name</label>
-              <input id="last" class="in" />
-            </div>
-            <div>
-              <label class="lbl">First Name</label>
-              <input id="first" class="in" />
-            </div>
-            <div>
-              <label class="lbl">M.I.</label>
-              <input id="mi" class="in" maxlength="2" />
-            </div>
-          </div>
-
-          <div class="row3">
-            <div>
-              <label class="lbl">Date of Birth</label>
-              <input id="dob" class="in" type="date" />
-            </div>
-            <div>
-              <label class="lbl">Civil Status</label>
-              <select id="civil" class="in">
-                <option value="">—</option>
-                <option>Single</option>
-                <option>Married</option>
-                <option>Separated</option>
-                <option>Widowed</option>
-              </select>
-            </div>
-            <div>
-              <label class="lbl">Blood Type</label>
-              <select id="blood" class="in">
-                <option value="">—</option>
-                <option>A+</option><option>A-</option>
-                <option>B+</option><option>B-</option>
-                <option>AB+</option><option>AB-</option>
-                <option>O+</option><option>O-</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row2">
-            <div>
-              <label class="lbl">Date Issued</label>
-              <input id="issued" class="in" type="date" />
-            </div>
-            <div>
-              <label class="lbl">Valid Until</label>
-              <input id="valid" class="in" type="date" />
-            </div>
-          </div>
-
-          <label class="lbl">Disability Type</label>
-          <input id="dtype" class="in" />
-
-          <label class="lbl">Address</label>
-          <textarea id="addr" class="in" rows="2"></textarea>
-
-          <p class="hint">
-            Option B must match the maker’s formatting exactly (uppercase name, same separators).
-          </p>
-        </details>
-
-        <hr/>
-
-        <label class="lbl">Strength used when embedding</label>
+        <label class="lbl">Strength (try around this)</label>
         <div class="row">
-          <input id="step" type="range" min="6" max="30" value="14" />
+          <input id="step" type="range" min="6" max="30" value="16" />
           <span id="stepVal" class="pill"></span>
         </div>
 
-        <div class="row">
-          <button id="verifyBtn" class="btn">Verify</button>
-          <button id="tryAutoBtn" class="btn ghost" title="Tries several strengths around your value">Auto-try</button>
-        </div>
-
         <div id="status" class="status">Upload an image to begin.</div>
+
         <div id="meter" class="meter" style="display:none;">
           <div class="bar" id="bar"></div>
         </div>
         <div class="small" id="detailsText"></div>
+
+        <div class="row" style="margin-top:12px;">
+          <a class="btn ghost" href="index.html">Back to Maker</a>
+        </div>
       </section>
 
       <section class="card">
         <h2>Preview</h2>
         <canvas id="cv" width="700" height="440"></canvas>
-        <p class="hint">
-          Tip: verification is most reliable on the original exported PNG. Heavy edits, re-saving, or strong compression can reduce match.
-        </p>
+        <p class="hint">Best results with the original exported PNG. Heavy edits/compression reduce match.</p>
       </section>
     </main>
   </div>
 
-  <script type="module" src="verify.js"></script>
+  <script defer src="verify.js"></script>
 </body>
 </html>
