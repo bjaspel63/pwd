@@ -3,6 +3,12 @@ const $ = (id) => document.getElementById(id);
 
 const PUBLIC_MARKER = "PWD-DWT-V1"; // public “stamp” embedded inside photo region
 
+// Embed patch INSIDE the photo region (no resample)
+const PATCH_X = PHOTO_X;
+const PATCH_Y = PHOTO_Y;
+const PATCH_W = DWT_N; // 256
+const PATCH_H = DWT_N; // 256
+
 const photoEl = $("photo");
 const exportBtn = $("exportBtn");
 const dl = $("dl");
@@ -404,56 +410,28 @@ function dataURLToImage(url){
   });
 }
 
-/* -----------------------------
-   Embed signature ONLY inside PHOTO region, BLUE channel
------------------------------- */
 async function embedSignatureIntoCanvas(ctx, W, H, bits, step){
-  const region = ctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H);
+  // Take EXACT 256x256 patch from the card (no resize)
+  const patch = ctx.getImageData(PATCH_X, PATCH_Y, PATCH_W, PATCH_H);
 
-  const tmp = document.createElement("canvas");
-  tmp.width = PHOTO_W; tmp.height = PHOTO_H;
-  const tctx = tmp.getContext("2d", { willReadFrequently:true });
-  tctx.putImageData(region, 0, 0);
-
-  const sq = document.createElement("canvas");
-  sq.width = sq.height = DWT_N;
-  const sctx = sq.getContext("2d", { willReadFrequently:true });
-  sctx.drawImage(tmp, 0, 0, DWT_N, DWT_N);
-
-  // BLUE channel
-  const img = sctx.getImageData(0, 0, DWT_N, DWT_N);
+  // Embed into BLUE channel directly
   const blue = new Float32Array(DWT_N * DWT_N);
   for(let p=0, i=0; p<blue.length; p++, i+=4){
-    blue[p] = img.data[i+2];
+    blue[p] = patch.data[i+2];
   }
 
   const signedBlue = embedDWT(blue, DWT_N, bits, step);
 
   for(let p=0, i=0; p<signedBlue.length; p++, i+=4){
-    img.data[i+2] = clamp8(signedBlue[p]);
-  }
-  sctx.putImageData(img, 0, 0);
-
-  const outPhoto = document.createElement("canvas");
-  outPhoto.width = PHOTO_W; outPhoto.height = PHOTO_H;
-  const octx = outPhoto.getContext("2d", { willReadFrequently:true });
-  octx.drawImage(sq, 0, 0, PHOTO_W, PHOTO_H);
-
-  const merged = ctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H);
-  const signedRegion = octx.getImageData(0, 0, PHOTO_W, PHOTO_H);
-
-  for(let i=0; i<merged.data.length; i+=4){
-    merged.data[i+2] = signedRegion.data[i+2];
+    patch.data[i+2] = clamp8(signedBlue[p]);
   }
 
-  ctx.putImageData(merged, PHOTO_X, PHOTO_Y);
+  // Put patch back
+  ctx.putImageData(patch, PATCH_X, PATCH_Y);
+
   return ctx.canvas.toDataURL("image/png");
 }
 
-function clamp8(x){
-  x = Math.round(x);
-  return x < 0 ? 0 : x > 255 ? 255 : x;
-}
 
 /* -----------------------------
    DWT (1-level 2D Haar)
