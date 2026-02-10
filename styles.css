@@ -1,3 +1,4 @@
+/* styles.css (MAKER) */
 :root{
   --bg:#f6f7fb;
   --ink:#13233a;
@@ -43,7 +44,7 @@ body{
   backdrop-filter: blur(8px);
 }
 
-.lbl{ display:block; font-weight:800; margin: 10px 0 6px; }
+.lbl{ display:block; font-weight:900; margin: 10px 0 6px; }
 .in{
   width:100%;
   padding: 10px 12px;
@@ -68,7 +69,7 @@ hr{ border:none; border-top:1px solid var(--stroke); margin: 14px 0; }
   color:#fff;
   padding: 10px 12px;
   border-radius: 14px;
-  font-weight: 800;
+  font-weight: 900;
   cursor:pointer;
   text-decoration:none;
   display:inline-flex;
@@ -90,21 +91,19 @@ hr{ border:none; border-top:1px solid var(--stroke); margin: 14px 0; }
   color: var(--muted);
   font-size: 12px;
 }
+
 .status{
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--stroke);
   background: #fff;
-  font-weight: 800;
+  font-weight: 900;
 }
-
-.chk{ display:flex; align-items:center; gap:8px; font-weight:700; color:var(--muted); }
-.spacer{ flex:1; }
 
 /* ID CARD */
 .id{
-  width: 1016px;   /* ~3.2:2 ratio */
+  width: 1016px;
   height: 638px;
   border-radius: 24px;
   border: 1px solid rgba(0,0,0,.10);
@@ -113,6 +112,7 @@ hr{ border:none; border-top:1px solid var(--stroke); margin: 14px 0; }
   overflow:hidden;
   transform: scale(.85);
   transform-origin: top left;
+  position: relative;
 }
 
 @media (max-width: 980px){
@@ -123,7 +123,7 @@ hr{ border:none; border-top:1px solid var(--stroke); margin: 14px 0; }
 }
 
 .idTop{
-  height: 90px;
+  height: 92px;
   padding: 16px 18px;
   display:flex;
   align-items:flex-start;
@@ -139,15 +139,15 @@ hr{ border:none; border-top:1px solid var(--stroke); margin: 14px 0; }
 
 .idMid{
   display:grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: 16px;
   padding: 16px 18px;
 }
 
 .photoBox{
   position:relative;
-  width: 280px;
-  height: 320px;
+  width: 300px;
+  height: 360px;
   border-radius: 18px;
   border: 1px solid rgba(0,0,0,.10);
   background: #fff;
