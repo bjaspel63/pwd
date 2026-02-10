@@ -261,20 +261,38 @@ function extractDWT(gray, N, bitCount, step){
   const bands = dwt2Haar(gray, N);
   const order = stableIndices(bands.LH, bands.HL);
 
+  const REPS = 7;
   const total = bitCount;
   const nLH = Math.floor(total/2);
   const nHL = total - nLH;
 
   const bits = [];
 
+  // majority vote helper
+  const vote = (arr) => {
+    let ones = 0;
+    for(const b of arr) ones += (b ? 1 : 0);
+    return ones >= Math.ceil(arr.length/2) ? 1 : 0;
+  };
+
   for(let i=0;i<nLH;i++){
-    const idx = order[i % order.length];
-    bits.push(extractBitFromCoeff(bands.LH[idx], step));
+    const reads = [];
+    for(let r=0;r<REPS;r++){
+      const idx = order[(i*REPS + r) % order.length];
+      reads.push(extractBitFromCoeff(bands.LH[idx], step));
+    }
+    bits.push(vote(reads));
   }
+
   for(let i=0;i<nHL;i++){
-    const idx = order[(i + 97) % order.length];
-    bits.push(extractBitFromCoeff(bands.HL[idx], step));
+    const reads = [];
+    for(let r=0;r<REPS;r++){
+      const idx = order[((i*REPS + r) + 97) % order.length];
+      reads.push(extractBitFromCoeff(bands.HL[idx], step));
+    }
+    bits.push(vote(reads));
   }
+
   return bits;
 }
 
