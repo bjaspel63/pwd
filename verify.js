@@ -1,12 +1,9 @@
-// verify.js (VERIFIER) - Upload only, AUTO verify DWT marker in photo region (blue channel)
-// Updated to match your MAKER auto-strength (Option B)
-
+// verify.js (VERIFIER) - Upload only, AUTO verify (no strength slider)
 const $ = (id) => document.getElementById(id);
 
 const PUBLIC_MARKER = "PWD-DWT-V1";
 
 const fileEl = $("file");
-const stepEl = $("step");     // kept for UI display; we set it automatically
 const stepVal = $("stepVal");
 
 const statusEl = $("status");
@@ -30,15 +27,9 @@ const PHOTO_H = 360;
 const DWT_N = 256;
 
 let blueForExtract = null;
-let lastBaseCtx = null; // store base ctx for auto strength recompute if needed
+let autoStep = 18;
 
-stepVal.textContent = `auto: ${stepEl.value}`;
-
-// If user drags slider, we still allow re-check (optional)
-stepEl.addEventListener("input", () => {
-  stepVal.textContent = `manual: ${stepEl.value}`;
-  if(blueForExtract) doVerify().catch(()=>{});
-});
+stepVal.textContent = `auto: —`;
 
 fileEl.addEventListener("change", async () => {
   const f = fileEl.files?.[0];
@@ -52,11 +43,14 @@ fileEl.addEventListener("change", async () => {
   base.height = CARD_H;
   const bctx = base.getContext("2d", { willReadFrequently:true });
   bctx.drawImage(img, 0, 0, CARD_W, CARD_H);
-  lastBaseCtx = bctx;
 
   // Preview
   ctx.clearRect(0,0,cv.width,cv.height);
   ctx.drawImage(base, 0, 0, cv.width, cv.height);
+
+  // AUTO strength (same logic as maker)
+  autoStep = autoStrengthFromPhotoRegionCanvas(bctx);
+  stepVal.textContent = `auto: ${autoStep}`;
 
   // Crop photo region
   const region = bctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H);
@@ -78,11 +72,6 @@ fileEl.addEventListener("change", async () => {
   for(let p=0, i=0; p<blueForExtract.length; p++, i+=4){
     blueForExtract[p] = data[i+2];
   }
-
-  // AUTO strength (same logic as maker)
-  const autoStep = autoStrengthFromPhotoRegionCanvas(bctx);
-  stepEl.value = autoStep;
-  stepVal.textContent = `auto: ${autoStep}`;
 
   setStatus("Image loaded. Verifying…", "ok");
   setMeter(null);
@@ -107,7 +96,7 @@ async function publicMarkerBits(bitCount){
 }
 
 /* -----------------------------
-   AUTO strength (Option B) — matches maker
+   AUTO strength — matches maker
 ------------------------------ */
 function autoStrengthFromPhotoRegionCanvas(bctx){
   const data = bctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H).data;
@@ -148,18 +137,15 @@ async function doVerify(){
 
   const expected = await publicMarkerBits(256);
 
-  // Base step: auto-calculated (or manual override if user moved slider)
-  let baseStep = parseInt(stepEl.value, 10);
-  if(!Number.isFinite(baseStep)) baseStep = 18;
-
-  // Try a wider range for robustness
+  // Try a range around auto strength
+  const base = autoStep;
   const steps = unique([
-    baseStep-4, baseStep-3, baseStep-2, baseStep-1,
-    baseStep,
-    baseStep+1, baseStep+2, baseStep+3, baseStep+4
+    base-4, base-3, base-2, base-1,
+    base,
+    base+1, base+2, base+3, base+4
   ].filter(s => s>=6 && s<=30));
 
-  let best = { score: 0, step: baseStep };
+  let best = { score: 0, step: base };
 
   for(const st of steps){
     const extracted = extractDWT(blueForExtract, DWT_N, expected.length, st);
@@ -291,3 +277,4 @@ function extractDWT(gray, N, bitCount, step){
   }
   return bits;
 }
+
