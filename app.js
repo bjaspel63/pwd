@@ -547,17 +547,23 @@ function embedDWT(gray, N, bits, step){
   const bands = dwt2Haar(gray, N);
   const order = stableIndices(bands.LH, bands.HL);
 
+  // repeat each bit across multiple coefficients
+  const REPS = 7; // 5–9 is good; higher = more robust, more change
   const total = bits.length;
   const nLH = Math.floor(total/2);
   const nHL = total - nLH;
 
   for(let i=0;i<nLH;i++){
-    const idx = order[i % order.length];
-    bands.LH[idx] = embedBitInCoeff(bands.LH[idx], bits[i], step);
+    for(let r=0;r<REPS;r++){
+      const idx = order[(i*REPS + r) % order.length];
+      bands.LH[idx] = embedBitInCoeff(bands.LH[idx], bits[i], step);
+    }
   }
   for(let i=0;i<nHL;i++){
-    const idx = order[(i + 97) % order.length];
-    bands.HL[idx] = embedBitInCoeff(bands.HL[idx], bits[nLH+i], step);
+    for(let r=0;r<REPS;r++){
+      const idx = order[((i*REPS + r) + 97) % order.length];
+      bands.HL[idx] = embedBitInCoeff(bands.HL[idx], bits[nLH+i], step);
+    }
   }
 
   const recon = idwt2Haar(bands, N);
