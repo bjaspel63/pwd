@@ -132,7 +132,7 @@ function autoStrengthFromPhotoRegion(ctx){
 
   // Map to 12..26 (higher when flatter)
   const step = Math.round(26 - norm * 14);
-  return Math.max(12, Math.min(26, step));
+  return Math.max(16, Math.min(26, step));
 }
 
 exportBtn.addEventListener("click", async () => {
