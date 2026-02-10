@@ -1,10 +1,12 @@
-// verify.js (VERIFIER) - Upload only, auto verify DWT marker in photo region (blue channel)
+// verify.js (VERIFIER) - Upload only, AUTO verify DWT marker in photo region (blue channel)
+// Updated to match your MAKER auto-strength (Option B)
+
 const $ = (id) => document.getElementById(id);
 
 const PUBLIC_MARKER = "PWD-DWT-V1";
 
 const fileEl = $("file");
-const stepEl = $("step");
+const stepEl = $("step");     // kept for UI display; we set it automatically
 const stepVal = $("stepVal");
 
 const statusEl = $("status");
@@ -28,11 +30,13 @@ const PHOTO_H = 360;
 const DWT_N = 256;
 
 let blueForExtract = null;
+let lastBaseCtx = null; // store base ctx for auto strength recompute if needed
 
-stepVal.textContent = `strength: ${stepEl.value}`;
+stepVal.textContent = `auto: ${stepEl.value}`;
+
+// If user drags slider, we still allow re-check (optional)
 stepEl.addEventListener("input", () => {
-  stepVal.textContent = `strength: ${stepEl.value}`;
-  // If an image is loaded, re-check quickly
+  stepVal.textContent = `manual: ${stepEl.value}`;
   if(blueForExtract) doVerify().catch(()=>{});
 });
 
@@ -48,6 +52,7 @@ fileEl.addEventListener("change", async () => {
   base.height = CARD_H;
   const bctx = base.getContext("2d", { willReadFrequently:true });
   bctx.drawImage(img, 0, 0, CARD_W, CARD_H);
+  lastBaseCtx = bctx;
 
   // Preview
   ctx.clearRect(0,0,cv.width,cv.height);
@@ -74,6 +79,11 @@ fileEl.addEventListener("change", async () => {
     blueForExtract[p] = data[i+2];
   }
 
+  // AUTO strength (same logic as maker)
+  const autoStep = autoStrengthFromPhotoRegionCanvas(bctx);
+  stepEl.value = autoStep;
+  stepVal.textContent = `auto: ${autoStep}`;
+
   setStatus("Image loaded. Verifying…", "ok");
   setMeter(null);
 
@@ -96,18 +106,58 @@ async function publicMarkerBits(bitCount){
   return bits;
 }
 
+/* -----------------------------
+   AUTO strength (Option B) — matches maker
+------------------------------ */
+function autoStrengthFromPhotoRegionCanvas(bctx){
+  const data = bctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H).data;
+
+  let energy = 0;
+  const w = PHOTO_W, h = PHOTO_H;
+
+  for(let y=0; y<h-1; y+=2){
+    for(let x=0; x<w-1; x+=2){
+      const i = (y*w + x) * 4;
+      const j = (y*w + (x+1)) * 4;
+      const k = ((y+1)*w + x) * 4;
+
+      const b  = data[i+2];
+      const bR = data[j+2];
+      const bD = data[k+2];
+
+      energy += Math.abs(b - bR) + Math.abs(b - bD);
+    }
+  }
+
+  const samplesX = Math.floor((w-1)/2) + 1;
+  const samplesY = Math.floor((h-1)/2) + 1;
+  const samples = samplesX * samplesY;
+
+  const norm = energy / (samples * 2 * 255);
+  const step = Math.round(26 - norm * 14);
+  return Math.max(12, Math.min(26, step));
+}
+
 async function doVerify(){
   if(!blueForExtract){
     setStatus("Upload an image to begin.", "bad");
     setMeter(null);
+    detailsText.textContent = "";
     return;
   }
 
   const expected = await publicMarkerBits(256);
 
-  const baseStep = parseInt(stepEl.value, 10);
-  const steps = unique([baseStep-3, baseStep-2, baseStep-1, baseStep, baseStep+1, baseStep+2, baseStep+3]
-    .filter(s => s>=6 && s<=30));
+  // Base step: auto-calculated (or manual override if user moved slider)
+  let baseStep = parseInt(stepEl.value, 10);
+  if(!Number.isFinite(baseStep)) baseStep = 18;
+
+  // Try a wider range for robustness
+  const steps = unique([
+    baseStep-4, baseStep-3, baseStep-2, baseStep-1,
+    baseStep,
+    baseStep+1, baseStep+2, baseStep+3, baseStep+4
+  ].filter(s => s>=6 && s<=30));
 
   let best = { score: 0, step: baseStep };
 
