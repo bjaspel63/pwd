@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PWD ID Maker (with DWT Signature)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>🪪 PWD ID Maker</h1>
+      <p class="sub">Fill details → generate ID → export PNG (with optional hidden DWT signature).</p>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <h2>Details</h2>
+
+        <label class="lbl">Photo</label>
+        <input id="photo" type="file" accept="image/*" />
+
+        <div class="row3">
+          <div>
+            <label class="lbl">Last Name</label>
+            <input id="last" class="in" placeholder="e.g., Dela Cruz" />
+          </div>
+          <div>
+            <label class="lbl">First Name</label>
+            <input id="first" class="in" placeholder="e.g., Juan" />
+          </div>
+          <div>
+            <label class="lbl">M.I.</label>
+            <input id="mi" class="in" placeholder="e.g., A" maxlength="2" />
+          </div>
+        </div>
+
+        <div class="row3">
+          <div>
+            <label class="lbl">Sex</label>
+            <select id="sex" class="in">
+              <option value="">—</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Prefer not to say</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Date of Birth</label>
+            <input id="dob" class="in" type="date" />
+          </div>
+          <div>
+            <label class="lbl">Civil Status</label>
+            <select id="civil" class="in">
+              <option value="">—</option>
+              <option>Single</option>
+              <option>Married</option>
+              <option>Separated</option>
+              <option>Widowed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row3">
+          <div>
+            <label class="lbl">Blood Type</label>
+            <select id="blood" class="in">
+              <option value="">—</option>
+              <option>A+</option><option>A-</option>
+              <option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option>
+              <option>O+</option><option>O-</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Date Issued</label>
+            <input id="issued" class="in" type="date" />
+          </div>
+          <div>
+            <label class="lbl">Valid Until</label>
+            <input id="valid" class="in" type="date" />
+          </div>
+        </div>
+
+        <label class="lbl">Disability Type</label>
+        <input id="dtype" class="in" placeholder="e.g., Orthopedic, Visual, Hearing..." />
+
+        <label class="lbl">Address</label>
+        <textarea id="addr" class="in" rows="2" placeholder="Full address"></textarea>
+
+        <label class="lbl">PWD ID Number</label>
+        <input id="pwdno" class="in" placeholder="e.g., PWD-01-234567" />
+
+        <hr />
+
+        <h3>Security (optional)</h3>
+        <p class="hint">If enabled, the export embeds a hidden signature in the final PNG. Your verifier can check it later.</p>
+
+        <label class="lbl">Secret Key (keep private)</label>
+        <input id="secret" class="in" type="password" placeholder="Used for signature" />
+
+        <div class="row">
+          <label class="chk">
+            <input id="useDwt" type="checkbox" checked />
+            Embed hidden DWT signature
+          </label>
+          <div class="spacer"></div>
+          <span id="stepPill" class="pill"></span>
+        </div>
+
+        <label class="lbl">Strength</label>
+        <input id="step" type="range" min="6" max="30" value="14" />
+
+        <div class="row">
+          <button id="exportBtn" class="btn">Export PNG</button>
+          <a id="dl" class="btn ghost" style="display:none;" download="pwd-id.png">Download</a>
+        </div>
+
+        <div id="status" class="status">Ready.</div>
+      </section>
+
+      <section class="card">
+        <h2>Preview</h2>
+
+        <!-- ID Card -->
+        <div id="card" class="id">
+          <div class="idTop">
+            <div class="brand">
+              <div class="brandTitle">PERSONS WITH DISABILITY (PWD) ID</div>
+              <div class="brandSub">Sample Layout • For demo use</div>
+            </div>
+            <div class="pwdNo" id="v_pwdno">PWD ID: —</div>
+          </div>
+
+          <div class="idMid">
+            <div class="photoBox">
+              <img id="v_photo" alt="Photo" />
+              <div class="photoHint">PHOTO</div>
+            </div>
+
+            <div class="info">
+              <div class="name" id="v_name">LAST, FIRST M.</div>
+              <div class="line"></div>
+
+              <div class="kv">
+                <div><span>Sex:</span> <b id="v_sex">—</b></div>
+                <div><span>DOB:</span> <b id="v_dob">—</b></div>
+                <div><span>Civil:</span> <b id="v_civil">—</b></div>
+                <div><span>Blood:</span> <b id="v_blood">—</b></div>
+                <div><span>Issued:</span> <b id="v_issued">—</b></div>
+                <div><span>Valid Until:</span> <b id="v_valid">—</b></div>
+              </div>
+
+              <div class="line"></div>
+              <div class="block">
+                <div class="label">Disability Type</div>
+                <div class="value" id="v_dtype">—</div>
+              </div>
+
+              <div class="block">
+                <div class="label">Address</div>
+                <div class="value" id="v_addr">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="idBot">
+            <div class="note">
+              This ID is issued for identification and benefits verification only.
+            </div>
+            <div class="sig">
+              <div class="sigLine"></div>
+              <div class="sigLabel">Authorized Signature</div>
+            </div>
+          </div>
+        </div>
+
+        <canvas id="out" width="1016" height="638" style="display:none;"></canvas>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
