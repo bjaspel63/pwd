@@ -1,4 +1,4 @@
-// app.js (MAKER) - Auto DWT marker, no secret/payload needed
+// app.js (MAKER) - Auto DWT marker + AUTO strength (Option B), no secret/payload needed
 const $ = (id) => document.getElementById(id);
 
 const PUBLIC_MARKER = "PWD-DWT-V1"; // public “stamp” embedded inside photo region
@@ -8,7 +8,7 @@ const exportBtn = $("exportBtn");
 const dl = $("dl");
 const statusEl = $("status");
 
-const stepEl = $("step");
+const stepEl = $("step");       // (kept for UI, but auto strength overrides it)
 const stepPill = $("stepPill");
 
 const v = {
@@ -83,10 +83,11 @@ function updatePreview(){
 document.addEventListener("input", updatePreview);
 document.addEventListener("change", updatePreview);
 
+// UI: keep slider, but show it's auto (still lets you see the current value)
 stepEl.addEventListener("input", () => {
-  stepPill.textContent = `strength: ${stepEl.value}`;
+  stepPill.textContent = `manual: ${stepEl.value}`;
 });
-stepPill.textContent = `strength: ${stepEl.value}`;
+stepPill.textContent = `manual: ${stepEl.value}`;
 
 photoEl.addEventListener("change", async () => {
   const f = photoEl.files?.[0];
@@ -96,21 +97,62 @@ photoEl.addEventListener("change", async () => {
   setStatus("Photo loaded.", "ok");
 });
 
+/* -----------------------------
+   AUTO strength (Option B)
+   Measures blue-channel “detail” in the PHOTO region of the rendered card.
+   More detail => lower step; less detail => higher step.
+------------------------------ */
+function autoStrengthFromPhotoRegion(ctx){
+  const data = ctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H).data;
+
+  let energy = 0;
+  const w = PHOTO_W, h = PHOTO_H;
+
+  // sample every 2 pixels for speed
+  for(let y=0; y<h-1; y+=2){
+    for(let x=0; x<w-1; x+=2){
+      const i = (y*w + x) * 4;
+      const j = (y*w + (x+1)) * 4;
+      const k = ((y+1)*w + x) * 4;
+
+      const b  = data[i+2];
+      const bR = data[j+2];
+      const bD = data[k+2];
+
+      energy += Math.abs(b - bR) + Math.abs(b - bD);
+    }
+  }
+
+  const samplesX = Math.floor((w-1)/2) + 1;
+  const samplesY = Math.floor((h-1)/2) + 1;
+  const samples = samplesX * samplesY;
+
+  // normalize to ~0..1
+  const norm = energy / (samples * 2 * 255);
+
+  // Map to 12..26 (higher when flatter)
+  const step = Math.round(26 - norm * 14);
+  return Math.max(12, Math.min(26, step));
+}
+
 exportBtn.addEventListener("click", async () => {
   dl.style.display = "none";
-
-  const step = parseInt(stepEl.value, 10);
 
   out.width = CARD_W;
   out.height = CARD_H;
 
   await renderCardToCanvas(outCtx, out.width, out.height);
 
+  // AUTO strength (overrides slider)
+  const autoStep = autoStrengthFromPhotoRegion(outCtx);
+  stepEl.value = autoStep; // reflect in UI
+  stepPill.textContent = `auto: ${autoStep}`;
+
   // Always embed marker
   const bits = await publicMarkerBits(256);
-  const finalUrl = await embedSignatureIntoCanvas(outCtx, out.width, out.height, bits, step);
+  const finalUrl = await embedSignatureIntoCanvas(outCtx, out.width, out.height, bits, autoStep);
 
-  setStatus("Export ready with automatic DWT marker ✔️", "ok");
+  setStatus(`Export ready ✔️ (auto strength ${autoStep})`, "ok");
 
   dl.href = finalUrl;
   dl.style.display = "inline-flex";
