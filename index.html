@@ -1,16 +1,17 @@
+<!-- index.html (MAKER) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PWD ID Maker (with DWT Signature)</title>
+  <title>PWD ID Maker (DWT Auto-Verified)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="wrap">
     <header class="top">
       <h1>🪪 PWD ID Maker</h1>
-      <p class="sub">Fill details → generate ID → export PNG (with optional hidden DWT signature).</p>
+      <p class="sub">Fill details → Export PNG with automatic hidden DWT marker (no secret needed).</p>
     </header>
 
     <main class="grid">
@@ -83,7 +84,7 @@
         </div>
 
         <label class="lbl">Disability Type</label>
-        <input id="dtype" class="in" placeholder="e.g., Orthopedic, Visual, Hearing..." />
+        <input id="dtype" class="in" placeholder="e.g., Orthopedic, Visual..." />
 
         <label class="lbl">Address</label>
         <textarea id="addr" class="in" rows="2" placeholder="Full address"></textarea>
@@ -93,27 +94,19 @@
 
         <hr />
 
-        <h3>Security (optional)</h3>
-        <p class="hint">If enabled, the export embeds a hidden signature in the final PNG. Your verifier can check it later.</p>
-
-        <label class="lbl">Secret Key (keep private)</label>
-        <input id="secret" class="in" type="password" placeholder="Used for signature" />
-
-        <div class="row">
-          <label class="chk">
-            <input id="useDwt" type="checkbox" checked />
-            Embed hidden DWT signature
-          </label>
-          <div class="spacer"></div>
-          <span id="stepPill" class="pill"></span>
-        </div>
+        <h3>Automatic DWT Marker</h3>
+        <p class="hint">This embeds a public “made by this system” marker inside the photo area.</p>
 
         <label class="lbl">Strength</label>
-        <input id="step" type="range" min="6" max="30" value="14" />
+        <div class="row">
+          <input id="step" type="range" min="6" max="30" value="16" />
+          <span id="stepPill" class="pill"></span>
+        </div>
 
         <div class="row">
           <button id="exportBtn" class="btn">Export PNG</button>
           <a id="dl" class="btn ghost" style="display:none;" download="pwd-id.png">Download</a>
+          <a class="btn ghost" href="verify.html">Open Verifier</a>
         </div>
 
         <div id="status" class="status">Ready.</div>
@@ -122,12 +115,11 @@
       <section class="card">
         <h2>Preview</h2>
 
-        <!-- ID Card -->
         <div id="card" class="id">
           <div class="idTop">
             <div class="brand">
               <div class="brandTitle">PERSONS WITH DISABILITY (PWD) ID</div>
-              <div class="brandSub">Sample Layout • For demo use</div>
+              <div class="brandSub">Auto DWT Marker • Demo</div>
             </div>
             <div class="pwdNo" id="v_pwdno">PWD ID: —</div>
           </div>
@@ -165,9 +157,7 @@
           </div>
 
           <div class="idBot">
-            <div class="note">
-              This ID is issued for identification and benefits verification only.
-            </div>
+            <div class="note">This ID is issued for identification and benefits verification only.</div>
             <div class="sig">
               <div class="sigLine"></div>
               <div class="sigLabel">Authorized Signature</div>
@@ -180,6 +170,8 @@
     </main>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <!-- IMPORTANT: no type="module" so file:// is less problematic.
+       Still recommended to use http://localhost or Netlify. -->
+  <script defer src="app.js"></script>
 </body>
 </html>
