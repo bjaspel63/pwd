@@ -1,8 +1,7 @@
-// Updated app.js
-// Fixes: reliable DWT signature embedding by embedding ONLY inside the PHOTO region,
-// using BLUE channel, so the verifier can crop the same area and extract reliably.
-
+// app.js (MAKER) - Auto DWT marker, no secret/payload needed
 const $ = (id) => document.getElementById(id);
+
+const PUBLIC_MARKER = "PWD-DWT-V1"; // public “stamp” embedded inside photo region
 
 const photoEl = $("photo");
 const exportBtn = $("exportBtn");
@@ -11,8 +10,6 @@ const statusEl = $("status");
 
 const stepEl = $("step");
 const stepPill = $("stepPill");
-const useDwtEl = $("useDwt");
-const secretEl = $("secret");
 
 const v = {
   name: $("v_name"),
@@ -33,19 +30,18 @@ const outCtx = out.getContext("2d", { willReadFrequently: true });
 
 let photoDataUrl = "";
 
-// ===================================================
-// CARD + PHOTO REGION CONSTANTS (must match renderer)
-// ===================================================
+// Fixed export size (must match verifier)
 const CARD_W = 1016;
 const CARD_H = 638;
 
+// Photo region (must match renderer & verifier crop)
 const TOP_H = 92;
 const PHOTO_X = 26;
 const PHOTO_Y = TOP_H + 24; // 116
 const PHOTO_W = 300;
 const PHOTO_H = 360;
 
-// DWT working square
+// DWT square size
 const DWT_N = 256;
 
 function fmtDate(s){
@@ -54,7 +50,6 @@ function fmtDate(s){
   if(Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"2-digit" });
 }
-
 function safeUpper(s){ return (s||"").trim().toUpperCase(); }
 
 function updatePreview(){
@@ -104,58 +99,37 @@ photoEl.addEventListener("change", async () => {
 exportBtn.addEventListener("click", async () => {
   dl.style.display = "none";
 
-  const secret = secretEl.value;
-  const useDwt = useDwtEl.checked;
   const step = parseInt(stepEl.value, 10);
 
-  if(useDwt && !secret){
-    return setStatus("Enter a Secret Key (required if DWT signature is enabled).", "bad");
-  }
-
-  // Render the card (fixed size)
   out.width = CARD_W;
   out.height = CARD_H;
 
-  const cardPNG = await renderCardToCanvas(outCtx, out.width, out.height);
+  await renderCardToCanvas(outCtx, out.width, out.height);
 
-  let finalUrl = cardPNG;
+  // Always embed marker
+  const bits = await publicMarkerBits(256);
+  const finalUrl = await embedSignatureIntoCanvas(outCtx, out.width, out.height, bits, step);
 
-  if(useDwt){
-    const payload = buildPayloadString();
-    console.log("PAYLOAD (paste into verifier Option A):", payload);
-
-    const bits = await signatureBits(secret, payload, 256);
-    const signedUrl = await embedSignatureIntoCanvas(outCtx, out.width, out.height, bits, step);
-    finalUrl = signedUrl;
-
-    setStatus("Export ready with hidden signature ✔️ (Payload logged to console)", "ok");
-  } else {
-    setStatus("Export ready ✔️", "ok");
-  }
+  setStatus("Export ready with automatic DWT marker ✔️", "ok");
 
   dl.href = finalUrl;
   dl.style.display = "inline-flex";
 });
 
-function buildPayloadString(){
-  // Make formatting stable (avoid extra spaces if MI empty)
-  const last = safeUpper($("last").value);
-  const first = safeUpper($("first").value);
-  const mi = safeUpper($("mi").value);
-  const miPart = mi ? ` ${mi}` : "";
-
-  return [
-    `PWDNO=${$("pwdno").value.trim()}`,
-    `NAME=${last},${first}${miPart}`,
-    `SEX=${$("sex").value}`,
-    `DOB=${$("dob").value}`,
-    `CIVIL=${$("civil").value}`,
-    `BLOOD=${$("blood").value}`,
-    `ISSUED=${$("issued").value}`,
-    `VALID=${$("valid").value}`,
-    `DTYPE=${$("dtype").value.trim()}`,
-    `ADDR=${$("addr").value.trim()}`
-  ].join("|");
+async function publicMarkerBits(bitCount){
+  const enc = new TextEncoder().encode(PUBLIC_MARKER);
+  let pool = new Uint8Array(await crypto.subtle.digest("SHA-256", enc));
+  const bits = [];
+  while(bits.length < bitCount){
+    for(const b of pool){
+      for(let k=7;k>=0;k--){
+        bits.push((b>>k)&1);
+        if(bits.length === bitCount) return bits;
+      }
+    }
+    pool = new Uint8Array(await crypto.subtle.digest("SHA-256", pool));
+  }
+  return bits;
 }
 
 function setStatus(msg, kind){
@@ -164,7 +138,7 @@ function setStatus(msg, kind){
 }
 
 /* -----------------------------
-   Render card to canvas (no libraries)
+   Render card to canvas
 ------------------------------ */
 async function renderCardToCanvas(ctx, W, H){
   ctx.clearRect(0,0,W,H);
@@ -192,7 +166,7 @@ async function renderCardToCanvas(ctx, W, H){
   ctx.fillText("PERSONS WITH DISABILITY (PWD) ID", 26, 48);
   ctx.fillStyle = "#5a6b7a";
   ctx.font = "700 16px system-ui, -apple-system, Segoe UI, Arial";
-  ctx.fillText("Sample Layout • For demo use", 26, 72);
+  ctx.fillText("Auto DWT Marker • Demo", 26, 72);
 
   // PWD No pill
   const pwdno = $("pwdno").value.trim() || "—";
@@ -369,7 +343,7 @@ function drawImageCoverCanvas(ctx, img, x, y, w, h, r){
 }
 
 /* -----------------------------
-   Helpers: file/dataurl
+   file/dataurl
 ------------------------------ */
 function fileToDataURL(file){
   return new Promise((resolve, reject)=>{
@@ -389,33 +363,11 @@ function dataURLToImage(url){
 }
 
 /* -----------------------------
-   Signature bits
------------------------------- */
-async function signatureBits(secret, payload, bitCount){
-  const msg = `${secret}|${payload}`;
-  const enc = new TextEncoder().encode(msg);
-  let pool = new Uint8Array(await crypto.subtle.digest("SHA-256", enc));
-  const bits = [];
-  while(bits.length < bitCount){
-    for(const b of pool){
-      for(let k=7;k>=0;k--){
-        bits.push((b>>k)&1);
-        if(bits.length === bitCount) return bits;
-      }
-    }
-    pool = new Uint8Array(await crypto.subtle.digest("SHA-256", pool));
-  }
-  return bits;
-}
-
-/* -----------------------------
-   NEW: Embed signature ONLY inside PHOTO region, BLUE channel
+   Embed signature ONLY inside PHOTO region, BLUE channel
 ------------------------------ */
 async function embedSignatureIntoCanvas(ctx, W, H, bits, step){
-  // 1) Get photo region from already-rendered card
   const region = ctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H);
 
-  // 2) Put region into a temp canvas, then scale into DWT square
   const tmp = document.createElement("canvas");
   tmp.width = PHOTO_W; tmp.height = PHOTO_H;
   const tctx = tmp.getContext("2d", { willReadFrequently:true });
@@ -426,29 +378,25 @@ async function embedSignatureIntoCanvas(ctx, W, H, bits, step){
   const sctx = sq.getContext("2d", { willReadFrequently:true });
   sctx.drawImage(tmp, 0, 0, DWT_N, DWT_N);
 
-  // 3) Extract BLUE channel
+  // BLUE channel
   const img = sctx.getImageData(0, 0, DWT_N, DWT_N);
   const blue = new Float32Array(DWT_N * DWT_N);
   for(let p=0, i=0; p<blue.length; p++, i+=4){
     blue[p] = img.data[i+2];
   }
 
-  // 4) Embed bits into BLUE channel via DWT
   const signedBlue = embedDWT(blue, DWT_N, bits, step);
 
-  // 5) Write back signed BLUE channel
   for(let p=0, i=0; p<signedBlue.length; p++, i+=4){
     img.data[i+2] = clamp8(signedBlue[p]);
   }
   sctx.putImageData(img, 0, 0);
 
-  // 6) Scale signed square back to PHOTO_W x PHOTO_H
   const outPhoto = document.createElement("canvas");
   outPhoto.width = PHOTO_W; outPhoto.height = PHOTO_H;
   const octx = outPhoto.getContext("2d", { willReadFrequently:true });
   octx.drawImage(sq, 0, 0, PHOTO_W, PHOTO_H);
 
-  // 7) Merge only BLUE back into original card photo region
   const merged = ctx.getImageData(PHOTO_X, PHOTO_Y, PHOTO_W, PHOTO_H);
   const signedRegion = octx.getImageData(0, 0, PHOTO_W, PHOTO_H);
 
@@ -457,7 +405,6 @@ async function embedSignatureIntoCanvas(ctx, W, H, bits, step){
   }
 
   ctx.putImageData(merged, PHOTO_X, PHOTO_Y);
-
   return ctx.canvas.toDataURL("image/png");
 }
 
@@ -467,8 +414,7 @@ function clamp8(x){
 }
 
 /* -----------------------------
-   1-level 2D Haar DWT
-   (works on Float32Array length N*N)
+   DWT (1-level 2D Haar)
 ------------------------------ */
 function dwt2Haar(gray, N){
   const half = N>>1;
