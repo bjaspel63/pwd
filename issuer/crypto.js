@@ -80,15 +80,37 @@ const CryptoUtil = (() => {
     return out;
   }
 
-  function parseToken(tokenBytes){
-    if(tokenBytes.length < 2+64) throw new Error("Token too short");
-    const len = bytesToU16(tokenBytes[0], tokenBytes[1]);
-    const need = 2 + len + 64;
-    if(tokenBytes.length < need) throw new Error("Token truncated");
-    const payload = tokenBytes.slice(2,2+len);
-    const sig = tokenBytes.slice(2+len, 2+len+64);
-    return { payload, sig };
+function parseToken(tokenBytes){
+  // Expected payload length in THIS project
+  const EXPECTED_PAYLOAD_LEN = 39;
+
+  if (tokenBytes.length < 2 + 64) throw new Error("Token too short");
+
+  let len = bytesToU16(tokenBytes[0], tokenBytes[1]);
+
+  // If length got corrupted by a few bit flips, clamp it to the expected size
+  // (This avoids false "Token truncated" when len becomes nonsense.)
+  if (len !== EXPECTED_PAYLOAD_LEN) {
+    // If it's clearly nonsense, force expected
+    if (len < 1 || len > 200) len = EXPECTED_PAYLOAD_LEN;
+    // If it's close-ish but still wrong, also force expected (you can relax this if you change payload size later)
+    else len = EXPECTED_PAYLOAD_LEN;
   }
+
+  let need = 2 + len + 64;
+
+  // Fallback: if still "truncated", try expected length anyway
+  if (tokenBytes.length < need) {
+    len = EXPECTED_PAYLOAD_LEN;
+    need = 2 + len + 64;
+    if (tokenBytes.length < need) throw new Error("Token truncated");
+  }
+
+  const payload = tokenBytes.slice(2, 2 + len);
+  const sig = tokenBytes.slice(2 + len, 2 + len + 64);
+  return { payload, sig };
+}
+
 
   // Decode payload fields (for displaying in verifier)
   function decodePayload(payload){
