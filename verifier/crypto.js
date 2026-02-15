@@ -147,12 +147,23 @@ const CryptoUtil = (() => {
     let s=""; for(const b of u8) s+=String.fromCharCode(b);
     return btoa(s);
   }
-  function b64ToU8(b64){
-    const bin = atob(b64);
-    const u8 = new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
-    return u8;
-  }
+function b64ToU8(b64){
+  let s = String(b64 || "").trim();
+
+  s = s.replace(/\s+/g, "");
+  s = s.replace(/-/g, "+").replace(/_/g, "/");
+  
+  const pad = s.length % 4;
+  if (pad === 2) s += "==";
+  else if (pad === 3) s += "=";
+  else if (pad !== 0) throw new Error("Invalid base64 length");
+
+  const bin = atob(s);
+  const u8 = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+
 
   return {
     enc, dec,
