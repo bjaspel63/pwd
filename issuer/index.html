@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Issuer — Invisible Watermark ID Maker</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>Issuer (Maker)</h1>
+      <p class="muted">Creates an ID card, signs payload (Ed25519), embeds invisible DWT watermark inside the photo region.</p>
+    </header>
+
+    <section class="card">
+      <div class="grid">
+        <div>
+          <label>Issuer ID (0–65535)</label>
+          <input id="issuerId" type="number" value="1001" min="0" max="65535"/>
+
+          <label>Card ID (16 bytes hex, auto if blank)</label>
+          <input id="cardIdHex" type="text" placeholder="leave blank to auto-generate"/>
+
+          <label>Expiry (YYYY-MM-DD)</label>
+          <input id="exp" type="date"/>
+
+          <label>Full Name (display only)</label>
+          <input id="fullName" type="text" value="Juan Dela Cruz"/>
+
+          <label>Photo (square-ish works best)</label>
+          <input id="photo" type="file" accept="image/*"/>
+
+          <div class="row">
+            <button id="genKeys" class="btn" type="button">Generate Keys</button>
+            <button id="make" class="btn primary" type="button">Make Card</button>
+          </div>
+
+          <div class="row">
+            <button id="download" class="btn" type="button" disabled>Download PNG</button>
+            <button id="exportPub" class="btn" type="button" disabled>Export Public Key</button>
+          </div>
+
+          <p id="status" class="status">Status: waiting…</p>
+
+          <details class="details">
+            <summary>Debug</summary>
+            <pre id="debug"></pre>
+          </details>
+        </div>
+
+        <div class="preview">
+          <canvas id="cv" width="1016" height="638"></canvas>
+          <p class="muted small">
+            Tip: Print this card. On verifier, align the printed card to the frame and tap “Scan”.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="dwt.js"></script>
+  <script src="ecc.js"></script>
+  <script src="crypto.js"></script>
+  <script src="wm.js"></script>
+  <script src="issuer.js"></script>
+</body>
+</html>
