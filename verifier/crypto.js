@@ -7,8 +7,9 @@ const CryptoUtil = (() => {
   function bytesToHex(u8){
     return [...u8].map(b => b.toString(16).padStart(2,'0')).join('');
   }
+
   function hexToBytes(hex){
-    const clean = hex.replace(/[^0-9a-f]/gi,'').toLowerCase();
+    const clean = String(hex || "").replace(/[^0-9a-f]/gi,'').toLowerCase();
     if(clean.length % 2) throw new Error("Hex length must be even");
     const out = new Uint8Array(clean.length/2);
     for(let i=0;i<out.length;i++){
@@ -16,6 +17,7 @@ const CryptoUtil = (() => {
     }
     return out;
   }
+
   function randBytes(n){
     const u8 = new Uint8Array(n);
     crypto.getRandomValues(u8);
@@ -31,21 +33,23 @@ const CryptoUtil = (() => {
   // issuer_id (2 bytes) + card_id (16 bytes) + exp_days (4 bytes) + version (1 byte) + name_hash (16 bytes)
   // total 39 bytes
   function dateToDays(yyyy_mm_dd){
-    // days since 1970-01-01 UTC
     const [y,m,d] = yyyy_mm_dd.split("-").map(Number);
     const ms = Date.UTC(y,m-1,d);
     return Math.floor(ms / 86400000);
   }
+
   function u32ToBytes(n){
     const b = new Uint8Array(4);
     b[0]=(n>>>24)&255; b[1]=(n>>>16)&255; b[2]=(n>>>8)&255; b[3]=n&255;
     return b;
   }
+
   function u16ToBytes(n){
     const b = new Uint8Array(2);
     b[0]=(n>>>8)&255; b[1]=n&255;
     return b;
   }
+
   function bytesToU16(b0,b1){ return (b0<<8)|b1; }
   function bytesToU32(b0,b1,b2,b3){ return ((b0<<24)>>>0) + (b1<<16) + (b2<<8) + b3; }
 
@@ -94,18 +98,18 @@ const CryptoUtil = (() => {
     const expDays = bytesToU32(payload[18],payload[19],payload[20],payload[21]);
     const version = payload[22];
     const nameHash = bytesToHex(payload.slice(23,39));
-    // convert days to date
+
     const ms = expDays * 86400000;
     const dt = new Date(ms);
     const yyyy = dt.getUTCFullYear();
     const mm = String(dt.getUTCMonth()+1).padStart(2,'0');
     const dd = String(dt.getUTCDate()).padStart(2,'0');
     const expDate = `${yyyy}-${mm}-${dd}`;
+
     return { issuerId, cardId, expDate, version, nameHash };
   }
 
   async function generateEd25519Keypair(){
-    // Ed25519 in WebCrypto (modern browsers). If this fails, you’ll need a polyfill/lib.
     return await crypto.subtle.generateKey(
       { name: "Ed25519" },
       true,
@@ -114,7 +118,6 @@ const CryptoUtil = (() => {
   }
 
   async function exportPublicKeyRaw(keypair){
-    // Export raw public key (32 bytes)
     const raw = await crypto.subtle.exportKey("raw", keypair.publicKey);
     return new Uint8Array(raw);
   }
@@ -147,23 +150,43 @@ const CryptoUtil = (() => {
     let s=""; for(const b of u8) s+=String.fromCharCode(b);
     return btoa(s);
   }
-function b64ToU8(b64){
-  let s = String(b64 || "").trim();
 
-  s = s.replace(/\s+/g, "");
-  s = s.replace(/-/g, "+").replace(/_/g, "/");
-  
-  const pad = s.length % 4;
-  if (pad === 2) s += "==";
-  else if (pad === 3) s += "=";
-  else if (pad !== 0) throw new Error("Invalid base64 length");
+  function b64ToU8(b64){
+    // Robust base64 decoder:
+    // - strips whitespace + surrounding quotes
+    // - converts URL-safe base64 to standard
+    // - removes non-base64 chars (common copy/paste junk)
+    // - fixes missing padding if possible
+    let s = String(b64 ?? "");
 
-  const bin = atob(s);
-  const u8 = new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
-  return u8;
-}
+    s = s.trim().replace(/^"+|"+$/g, ""); // remove surrounding quotes if any
+    s = s.replace(/\s+/g, "");           // remove whitespace/newlines
+    s = s.replace(/-/g, "+").replace(/_/g, "/"); // url-safe -> standard
+    s = s.replace(/[^A-Za-z0-9+/=]/g, "");       // drop invalid chars
 
+    // if '=' appears, keep padding only at the end
+    const firstPad = s.indexOf("=");
+    if (firstPad !== -1) {
+      const head = s.slice(0, firstPad).replace(/=/g, "");
+      const tail = s.slice(firstPad).replace(/[^=]/g, "");
+      s = head + tail;
+    }
+
+    const mod = s.length % 4;
+    if (mod === 2) s += "==";
+    else if (mod === 3) s += "=";
+    else if (mod === 1) {
+      throw new Error(
+        "Invalid base64 length (mod 4 = 1). The string is likely corrupted/truncated. " +
+        "Re-export publicKey.json from issuer and use the file directly (no manual edits)."
+      );
+    }
+
+    const bin = atob(s);
+    const u8 = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
 
   return {
     enc, dec,
