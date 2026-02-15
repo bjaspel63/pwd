@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Verifier — Invisible Watermark Scanner</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>Verifier (Camera)</h1>
+      <p class="muted">Align the printed card to the frame, then scan. Works offline using the public key.</p>
+    </header>
+
+    <section class="card">
+      <div class="grid">
+        <div class="cam">
+          <div class="videoWrap">
+            <video id="video" autoplay playsinline muted></video>
+            <div class="frame">
+              <div class="hint">Align card inside this frame</div>
+            </div>
+          </div>
+
+          <div class="row">
+            <button id="start" class="btn" type="button">Start Camera</button>
+            <button id="scan" class="btn primary" type="button" disabled>Scan</button>
+          </div>
+
+          <canvas id="snap" width="1016" height="638" style="display:none;"></canvas>
+        </div>
+
+        <div>
+          <p id="status" class="status">Status: waiting…</p>
+          <pre id="result" class="result"></pre>
+
+          <details class="details">
+            <summary>Debug</summary>
+            <pre id="debug"></pre>
+          </details>
+        </div>
+      </div>
+    </section>
+  </div>
+
+   <script src="dwt.js"></script>
+  <script src="ecc.js"></script>
+  <script src="crypto.js"></script>
+  <script src="wm.js"></script>
+
+  <!-- NEW: OpenCV.js (for auto corner detect + perspective warp) -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+
+  <script src="verifier.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "alg": "Ed25519",
+  "publicKey_raw_base64": "PASTE_BASE64_HERE",
+  "note": "Copy this into verifier/publicKey.json"
+}

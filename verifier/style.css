@@ -1,0 +1,103 @@
+:root{
+  --bg:#0b1220;
+  --card:#111a2e;
+  --stroke:rgba(255,255,255,.12);
+  --ink:#eaf0ff;
+  --muted:rgba(234,240,255,.7);
+  --btn:#1f2c4d;
+  --primary:#22c55e;
+  --radius:18px;
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background: radial-gradient(900px 600px at 20% 10%, rgba(34,197,94,.15), transparent 60%),
+              radial-gradient(900px 600px at 80% 30%, rgba(59,130,246,.10), transparent 60%),
+              var(--bg);
+  color:var(--ink);
+}
+.wrap{ max-width:1100px; margin:24px auto; padding:0 16px; }
+.top h1{ margin:0 0 6px; font-size:22px; }
+.muted{ color:var(--muted); margin:0; }
+
+.card{
+  margin-top:16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border:1px solid var(--stroke);
+  border-radius: var(--radius);
+  padding:16px;
+}
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 420px;
+  gap:16px;
+}
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+}
+
+.videoWrap{
+  position:relative;
+  border-radius: 16px;
+  overflow:hidden;
+  border:1px solid var(--stroke);
+  background:#000;
+  aspect-ratio: 1016 / 638;
+}
+video{
+  width:100%;
+  height:100%;
+  object-fit: cover;
+  display:block;
+}
+
+.frame{
+  position:absolute;
+  inset: 8%;
+  border: 3px dashed rgba(234,240,255,.7);
+  border-radius: 16px;
+  pointer-events:none;
+}
+.hint{
+  position:absolute;
+  left:12px;
+  top:12px;
+  padding:6px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.45);
+  color: rgba(234,240,255,.92);
+  font-size: 13px;
+}
+
+.row{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--stroke);
+  background: var(--btn);
+  color: var(--ink);
+  cursor:pointer;
+}
+.btn:disabled{ opacity:.5; cursor:not-allowed; }
+.btn.primary{ background: var(--primary); border-color: rgba(255,255,255,.18); color:#08130b; font-weight:700; }
+
+.status{ margin:0 0 10px; color: var(--muted); }
+.result{
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 140px;
+}
+.details pre{
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 10px;
+}
