@@ -104,5 +104,5 @@ function getSubbandHH2(w, h){
 }
 
 
-  return { dwt2D, idwt2D, getSubbandLH2, getSubbandHL2,getSubbandHH2 };
+return { dwt2D, idwt2D, getSubbandLH2, getSubbandHL2, getSubbandHH2 };
 })();
