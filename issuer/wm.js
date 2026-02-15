@@ -1,4 +1,4 @@
-// wm.js — watermark embed/extract in DWT bands (LH2 + HL2)
+// wm.js — watermark embed/extract in DWT bands (LH2 + HL2 + optional HH2)
 // Uses pseudo-random coefficient positions + signs, spread over SAMPLES_PER_BIT.
 
 const WM = (() => {
@@ -29,14 +29,15 @@ const WM = (() => {
   function clamp255(v){ return v<0?0 : v>255?255 : v; }
 
   function channelToFloat(imgData, ch){
-    const { data, width:w, height:h } = imgData;
-    const out = new Float32Array(w*h);
+    const { data, width:w } = imgData;
+    const out = new Float32Array(w * imgData.height);
     let p=0;
     for(let i=0;i<data.length;i+=4){
       out[p++] = data[i+ch];
     }
     return out;
   }
+
   function floatToChannel(imgData, ch, arr){
     const { data } = imgData;
     let p=0;
@@ -58,7 +59,9 @@ const WM = (() => {
   async function embedBitsInBlue(imgData, bits){
     const w = imgData.width, h = imgData.height;
 
-    if((w % 4)!==0 || (h % 4)!==0) throw new Error("Watermark region must be divisible by 4 (for 2-level DWT).");
+    if((w % 4)!==0 || (h % 4)!==0){
+      throw new Error("Watermark region must be divisible by 4 (for 2-level DWT).");
+    }
 
     const seed32 = await seedToU32(WATERMARK_SEED + `|${w}x${h}`);
     const rnd = xorshift32(seed32);
@@ -69,19 +72,21 @@ const WM = (() => {
     // DWT
     let coeff = DWT.dwt2D(blue, w, h, LEVELS);
 
-    // Two subbands for capacity
+    // Capacity pool: LH2 + HL2 + optional HH2
     const rLH = DWT.getSubbandLH2(w, h);
     const rHL = DWT.getSubbandHL2(w, h);
-    const rHH = DWT.getSubbandHH2(w, h);
-
+    const rHH = (typeof DWT.getSubbandHH2 === "function") ? DWT.getSubbandHH2(w, h) : null;
 
     const idxLH = regionIndices(w, rLH.x0,rLH.x1,rLH.y0,rLH.y1);
     const idxHL = regionIndices(w, rHL.x0,rHL.x1,rHL.y0,rHL.y1);
 
-    const idxHH = regionIndices(w, rHH.x0,rHH.x1,rHH.y0,rHH.y1);
-    const pool = idxLH.concat(idxHL).concat(idxHH);
+    let pool = idxLH.concat(idxHL);
 
-    const pool = idxLH.concat(idxHL);
+    if(rHH){
+      const idxHH = regionIndices(w, rHH.x0,rHH.x1,rHH.y0,rHH.y1);
+      pool = pool.concat(idxHH);
+    }
+
     const poolN = pool.length;
 
     const need = bits.length * SAMPLES_PER_BIT;
@@ -89,17 +94,14 @@ const WM = (() => {
       throw new Error(`Not enough DWT capacity. Need ${need} samples, have ${poolN}. Try bigger photo region or smaller payload.`);
     }
 
-    // Shuffle-like selection: we’ll pick sequential unique positions using a partial Fisher-Yates idea
-    // for speed, just pick positions without replacement using a boolean map if needed.
+    // pick positions without replacement
     const used = new Uint8Array(poolN);
 
     function pickIndex(){
-      // pick unused
       for(let tries=0; tries<50000; tries++){
         const j = rnd() % poolN;
         if(!used[j]) { used[j]=1; return pool[j]; }
       }
-      // fallback linear scan
       for(let j=0;j<poolN;j++){
         if(!used[j]) { used[j]=1; return pool[j]; }
       }
@@ -124,6 +126,7 @@ const WM = (() => {
 
   async function extractBitsFromBlue(imgData, bitCount){
     const w = imgData.width, h = imgData.height;
+
     if((w % 4)!==0 || (h % 4)!==0) throw new Error("Region must be divisible by 4.");
 
     const seed32 = await seedToU32(WATERMARK_SEED + `|${w}x${h}`);
@@ -132,15 +135,24 @@ const WM = (() => {
     const blue = channelToFloat(imgData, 2);
     let coeff = DWT.dwt2D(blue, w, h, LEVELS);
 
-    const rLH = DWT.getSubbandLH2(coeff, w, h);
-    const rHL = DWT.getSubbandHL2(coeff, w, h);
+    const rLH = DWT.getSubbandLH2(w, h);
+    const rHL = DWT.getSubbandHL2(w, h);
+    const rHH = (typeof DWT.getSubbandHH2 === "function") ? DWT.getSubbandHH2(w, h) : null;
+
     const idxLH = regionIndices(w, rLH.x0,rLH.x1,rLH.y0,rLH.y1);
     const idxHL = regionIndices(w, rHL.x0,rHL.x1,rHL.y0,rHL.y1);
-    const pool = idxLH.concat(idxHL);
+
+    let pool = idxLH.concat(idxHL);
+
+    if(rHH){
+      const idxHH = regionIndices(w, rHH.x0,rHH.x1,rHH.y0,rHH.y1);
+      pool = pool.concat(idxHH);
+    }
+
     const poolN = pool.length;
 
     const need = bitCount * SAMPLES_PER_BIT;
-    if(need > poolN) throw new Error("Not enough capacity for requested bits.");
+    if(need > poolN) throw new Error(`Not enough capacity for requested bits. Need ${need}, have ${poolN}.`);
 
     const used = new Uint8Array(poolN);
 
@@ -155,7 +167,7 @@ const WM = (() => {
       throw new Error("No indices left");
     }
 
-    const outBits = new Array(bitCount).fill(0);
+    const outBits = new Array(bitCount);
 
     for(let i=0;i<bitCount;i++){
       let score = 0;
@@ -166,9 +178,9 @@ const WM = (() => {
       }
       outBits[i] = score >= 0 ? 1 : 0;
     }
+
     return outBits;
   }
 
-return { WATERMARK_SEED, LEVELS, SAMPLES_PER_BIT, ALPHA, embedBitsInBlue, extractBitsFromBlue };
+  return { WATERMARK_SEED, LEVELS, SAMPLES_PER_BIT, ALPHA, embedBitsInBlue, extractBitsFromBlue };
 })();
-;
