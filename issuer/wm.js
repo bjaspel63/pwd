@@ -169,5 +169,6 @@ const WM = (() => {
     return outBits;
   }
 
-  return { WATERMARK_SEED, LEVELS, SAMPLES_PER_BIT, ALPHA, embedBitsInBlue, extractBitsFromBlue };
+return { WATERMARK_SEED, LEVELS, SAMPLES_PER_BIT, ALPHA, embedBitsInBlue, extractBitsFromBlue };
 })();
+;
